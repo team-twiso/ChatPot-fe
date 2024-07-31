@@ -1,10 +1,10 @@
-name: deploy
+name: deploy-prod
 
 on:
   push:
-    branches: [ "develop", "main" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -17,18 +17,22 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USER_NAME }}
           password: ${{ secrets.DOCKER_USER_PW }}
+      - name: env 설정
+        run: |
+          echo "REACT_APP_API_URL=${{ secrets.API_URL_PROD }}" >> .env
+          cat .env
       - name: 이미지 빌드
-        run: docker build -t ${{ secrets.DOCKER_USER_NAME }}/${{ secrets.DOCKER_IMAGE_NAME }}-fe .
+        run: docker build -t ${{ secrets.DOCKER_USER_NAME }}/${{ secrets.DOCKER_IMAGE_NAME }}-fe-prod -f Dockerfile .
       - name: 도커허브에 이미지 푸시
-        run: docker push ${{ secrets.DOCKER_USER_NAME }}/${{ secrets.DOCKER_IMAGE_NAME }}-fe
+        run: docker push ${{ secrets.DOCKER_USER_NAME }}/${{ secrets.DOCKER_IMAGE_NAME }}-fe-prod
       - name: AWS EC2에 ssh 접속 후 배포
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.AWS_IP }}
+          host: ${{ secrets.AWS_IP_PROD }}
           port: 22
           username: ubuntu
-          key: ${{ secrets.AWS_KEY }}
+          key: ${{ secrets.AWS_KEY_PROD }}
           script: |
             echo "AWS 연결"
-            docker pull ${{ secrets.DOCKER_USER_NAME }}/${{ secrets.DOCKER_IMAGE_NAME }}-fe
+            docker pull ${{ secrets.DOCKER_USER_NAME }}/${{ secrets.DOCKER_IMAGE_NAME }}-fe-prod
             docker-compose up -d
